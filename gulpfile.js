@@ -1,22 +1,23 @@
 /* ===== ПОДКЛЮЧЕНИЕ ПЛАГИНОВ ===== */
-var gulp         = require('gulp'),                         // GULP
-    sass         = require('gulp-sass'),                    // Препроцессор Sass
-    browserSync  = require('browser-sync'),                 // Автоперезагрузка браузера
-    concat       = require('gulp-concat'),                  // Конкатенация (соединение) файлов
-    uglify       = require('gulp-uglifyjs'),                // Сжатие JS
-    rename       = require('gulp-rename'),                  // Для переименования файлов
-    del          = require('del'),                          // Для удаления файлов и папок
-    imagemin     = require('gulp-imagemin'),                // Для работы с изображениями
-    pngquant     = require('imagemin-pngquant'),            // Для работы с PNG
-    cache        = require('gulp-cache'),                   // Для кэширования
-    autoprefixer = require('gulp-autoprefixer'),            // Автоматическое добавление префиксов
-    include      = require('gulp-file-include'),            // Подключение файлов в другие файлы
-    queries      = require('gulp-group-css-media-queries'), // Объединение медиа запросов
-    sprite       = require('gulp.spritesmith'),             // Создание спрайтов
-    plumber      = require('gulp-plumber'),                 // Перехват ошибок
-    gutil        = require('gulp-util'),                    // Различные вспомогательные утилиты
-    cssImport    = require('gulp-cssimport'),               // Работа @import для CSS файлов
-	 path         = require('path')                          // Для работы с путями
+var
+	gulp         = require('gulp'),                         // GULP
+   sass         = require('gulp-sass'),                    // Препроцессор Sass
+   browserSync  = require('browser-sync'),                 // Автоперезагрузка браузера
+   uglify       = require('gulp-uglifyjs'),                // Сжатие JS
+   rename       = require('gulp-rename'),                  // Для переименования файлов
+   del          = require('del'),                          // Для удаления файлов и папок
+   imagemin     = require('gulp-imagemin'),                // Для работы с изображениями
+   pngquant     = require('imagemin-pngquant'),            // Для работы с PNG
+   cache        = require('gulp-cache'),                   // Для кэширования
+   autoprefixer = require('gulp-autoprefixer'),            // Автоматическое добавление префиксов
+   include      = require('gulp-file-include'),            // Подключение файлов в другие файлы
+   queries      = require('gulp-group-css-media-queries'), // Объединение медиа запросов
+   sprite       = require('gulp.spritesmith'),             // Создание спрайтов
+   plumber      = require('gulp-plumber'),                 // Перехват ошибок
+   gutil        = require('gulp-util'),                    // Различные вспомогательные утилиты
+   cssImport    = require('gulp-cssimport'),               // Работа @import
+	path         = require('path'),                         // Для работы с путями
+	strip        = require('gulp-strip-css-comments')       // Убирает комментарии
 ;
 /* ================================ */
 
@@ -47,10 +48,10 @@ var dist = 'dist/'; //Папка готового проекта
 /* ===== ТАСК "BROWSER-SYNC" ====== */
 gulp.task('browser-sync', function() {
 	browserSync({ // Выполняем browserSync
-		server: { // Определяем параметры сервера
-			baseDir: dist // Директория для сервера
-		},
-		notify: false // Отключаем уведомления
+		server: 'dist', // Директория для сервера
+		notify: false, // Отключаем уведомления
+		open: 'external', // Внешняя ссылка вместо localhost
+		ghostMode: false // Отключаем синхронизацию между устройствами
 	});
 });
 /* ================================ */
@@ -69,6 +70,7 @@ gulp.task('html', function () {
 gulp.task('sass', function() {
 	return gulp.src(app + 'src/style.scss') // Берём источник
 		.pipe(plumber(err)) // Отслеживаем ошибки
+		.pipe(cssImport()) // Запускаем @import
 		.pipe(sass({outputStyle: 'expanded'})) // Преобразуем SCSS в CSS
 		.pipe(queries()) // Объединяем медиа запросы
 		.pipe(autoprefixer(['last 15 versions', '>1%', 'ie 8', 'ie 7'], {cascade: true})) // Создаём префиксы
@@ -81,8 +83,11 @@ gulp.task('sass', function() {
 gulp.task('css-libs', function() {
 	return gulp.src(app + 'src/libs.scss') // Берём источник
 		.pipe(plumber(err)) // Отслеживаем ошибки
-		.pipe(cssImport()) // Загружаем в файл все CSS
+		.pipe(cssImport()) // Запускаем @import
 		.pipe(sass({outputStyle: 'compressed'})) // Преобразуем SCSS в CSS
+		.pipe(strip({ // Убираем комментарии
+			preserve: false // /* */ - Такие тоже
+		}))
 		.pipe(rename({suffix: '.min'})) // Добавляем суффикс ".min"
 		.pipe(gulp.dest(dist + 'css')) // Выгружаем
 		.pipe(reload({stream: true})); //Перезагружаем сервер
@@ -91,9 +96,9 @@ gulp.task('css-libs', function() {
 
 /* ======== ТАСК "JS" ======== */
 gulp.task('js', function() {
-	return gulp.src([app + 'src/**/*.js', '!' + app + 'src/libs.js']) // Берём все необходимые скрипты
+	return gulp.src(app + 'src/script.js') // Берём все необходимые скрипты
 		.pipe(plumber(err)) // Отслеживаем ошибки
-		.pipe(concat('script.js')) // Собираем их в один файл
+		.pipe(include()) // Собираем их в один файл
 		.pipe(gulp.dest(dist + 'js')) // Выгружаем
 		.pipe(reload({stream: true})); //Перезагружаем сервер
 });
@@ -174,9 +179,9 @@ gulp.task('watch', function() {
 
 
 
-/* //////////////////////////////// */
-/* /////// СЛУЖЕБНЫЕ ТАСКИ //////// */
-/* //////////////////////////////// */
+/* -------------------------------- */
+/*         СЛУЖЕБНЫЕ ТАСКИ          */
+/* -------------------------------- */
 
 /* ===== КОМАНДА ПО УМОЛЧАНИЮ ===== */
 gulp.task('default', ['build', 'browser-sync', 'watch']);
@@ -200,7 +205,3 @@ gulp.task('sprite', function() {
 	spriteData.css.pipe(gulp.dest(app + 'sprites/')); // путь, куда сохраняем стили
 });
 /* ================================ */
-
-/* //////////////////////////////// */
-/* //////////////////////////////// */
-/* //////////////////////////////// */
