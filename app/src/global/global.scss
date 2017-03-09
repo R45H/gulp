@@ -4,11 +4,16 @@ html {
 
 body {
 	font-size: 1.6rem;
+	font-family: $font-main
 }
 
 input {
 	-webkit-appearance: none;
 	border-radius: 0;
+}
+
+textarea {
+	resize: none;
 }
 
 ::selection {
