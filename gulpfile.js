@@ -1,8 +1,9 @@
 /* ===== ПОДКЛЮЧЕНИЕ ПЛАГИНОВ ===== */
 var
-	gulp         = require('gulp'),                         // GULP
+   gulp         = require('gulp'),                         // GULP
    sass         = require('gulp-sass'),                    // Препроцессор Sass
    browserSync  = require('browser-sync'),                 // Автоперезагрузка браузера
+   concat       = require('gulp-concat'),                  // Конкатенация (соединение) файлов
    uglify       = require('gulp-uglifyjs'),                // Сжатие JS
    rename       = require('gulp-rename'),                  // Для переименования файлов
    del          = require('del'),                          // Для удаления файлов и папок
@@ -16,9 +17,10 @@ var
    plumber      = require('gulp-plumber'),                 // Перехват ошибок
    gutil        = require('gulp-util'),                    // Различные вспомогательные утилиты
    cssImport    = require('gulp-cssimport'),               // Работа @import
-	path         = require('path'),                         // Для работы с путями
-	strip        = require('gulp-strip-css-comments')       // Убирает комментарии
-;
+   strip        = require('gulp-strip-css-comments'),      // Убирает комментарии
+   path         = require('path'),                         // Для работы с путями
+   runSequence  = require('run-sequence');                 // Для синхронного выполнения задач
+
 /* ================================ */
 
 
@@ -48,7 +50,7 @@ var dist = 'dist/'; //Папка готового проекта
 /* ===== ТАСК "BROWSER-SYNC" ====== */
 gulp.task('browser-sync', function() {
 	browserSync({ // Выполняем browserSync
-		server: 'dist', // Директория для сервера
+		server: dist, // Директория для сервера
 		notify: false, // Отключаем уведомления
 		open: 'external', // Внешняя ссылка вместо localhost
 		ghostMode: false // Отключаем синхронизацию между устройствами
@@ -61,8 +63,7 @@ gulp.task('html', function () {
 	return gulp.src(app + '*.html') //Выберем файлы по нужному пути
 		.pipe(plumber(err)) // Отслеживаем ошибки
 		.pipe(include()) // Прогоним через file-include
-		.pipe(gulp.dest(dist)) //Выплюнем их
-		.pipe(reload({stream: true})); //Перезагрузим сервер
+		.pipe(gulp.dest(dist)); //Выплюнем их
 });
 /* ================================ */
 
@@ -145,21 +146,26 @@ gulp.task('clean', function() {
 /* ================================ */
 
 /* ========= ТАСК "BUILD" ========= */
-gulp.task('build', [
-	'clean',
-	'html',
-	'sass',
-	'css-libs',
-	'js',
-	'js-libs',
-	'img',
-	'fonts'
-]);
+gulp.task('build', function(callback) {
+	runSequence(
+		'clean',
+		[
+			'html',
+			'sass',
+			'css-libs',
+			'js',
+			'js-libs',
+			'img',
+			'fonts'
+		],
+		callback
+	);
+});
 /* ================================ */
 
 /* ========= ТАСК "WATCH" ========= */
 gulp.task('watch', function() {
-	var watcherHtml = gulp.watch(app + '**/*.html', ['html']); // Наблюдение за HTML файлами
+	var watcherHtml = gulp.watch(app + '**/*.html', ['html', reload]); // Наблюдение за HTML файлами
 	gulp.watch([app + 'src/**/*.scss', '!' + app + 'src/libs.scss'], ['sass']); // Наблюдение за своими SCSS файлами
 	gulp.watch(app + 'src/libs.scss', ['css-libs']); // Наблюдение за скачанными CSS файлами
 	gulp.watch([app + 'src/**/*.js', '!' + app + 'src/libs.js'], ['js']); // Наблюдение за своими JS файлами
@@ -184,7 +190,14 @@ gulp.task('watch', function() {
 /* -------------------------------- */
 
 /* ===== КОМАНДА ПО УМОЛЧАНИЮ ===== */
-gulp.task('default', ['build', 'browser-sync', 'watch']);
+gulp.task('default', function(callback) {
+	runSequence(
+		'build',
+		'browser-sync',
+		'watch',
+		callback
+	);
+});
 /* ================================ */
 
 /* ======== ОЧИСТКА КЭША ========== */
