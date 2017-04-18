@@ -19,8 +19,8 @@ var
    cssImport    = require('gulp-cssimport'),               // Работа @import
    strip        = require('gulp-strip-css-comments'),      // Убирает комментарии
    path         = require('path'),                         // Для работы с путями
-   runSequence  = require('run-sequence');                 // Для синхронного выполнения задач
-
+   runSequence  = require('run-sequence')                  // Для синхронного выполнения задач
+;
 /* ================================ */
 
 
